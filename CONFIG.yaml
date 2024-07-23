@@ -1,0 +1,2 @@
+DATA_DIR: "/home/benjamin.cretois/data/dogs-vs-cats/"
+MODEL_WEIGHTS: "/home/benjamin.cretois/Code/xai/src/train/my_checkpoints/cats-dogs-epoch=10-val_acc=0.98.ckpt"
