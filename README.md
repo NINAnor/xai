@@ -1,23 +1,23 @@
 # Explainable AI experiments
 
-This folder contains a few experiment for using explanable AI techniques. Most experiments are conducted using the [Kaggle's cats vs dogs dataset](https://www.kaggle.com/c/dogs-vs-cats)
+All the XAI techniques in this repository are using a pretrained Residual Network 50 layers.
 
 ## How to use the folder
 
-- Install the dependancies:
+- Install the dependancies and enter the virtual environment:
 
 ```
 poetry install
+poetry shell
 ```
 
-- Train the cats vs dogs classifier model
+## User interface
+
+We made a user interface available so you can seemlessly explain the pictures:
 
 ```
-python src/train/cat_dog_classifier.py
+python gradio_app.py
 ```
-
-This will create a `.ckpt` file
-
 
 ## Supported methods
 
@@ -47,3 +47,4 @@ python src/xai_methods/dff.py --img ./assets/images/dog.png --output src/xai_met
 This will give you the following result:
 
 ![Picture of a German shepherd explained using Deep Feature Factorization (DFF). DFF is a technique that decomposes the image as a set of interpretable components as viewed by the AI algorithm. This allows the visualization and understanding of complex representations learned by the network. ](./src/xai_methods/dog_dff.png)
+

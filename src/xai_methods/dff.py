@@ -79,7 +79,6 @@ if __name__ == "__main__":
 
     model = resnet50(pretrained=True)
     model.eval()
-    print("Loaded model")
 
     result = Image.fromarray(visualize_image(model, args.img, args.n_components, args.top_k))
     result.save(args.output)

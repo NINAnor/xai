@@ -8,54 +8,41 @@ import sys
 import yaml
 import os
 import argparse
+import requests
+
+from _utils import processImage
 
 # Load configuration
 with open("./CONFIG.yaml") as f:
     cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-
-def initModel(model_weights, class_names):
-
+def initModel(pretrained=True):
     # Load pre-trained model and set to evaluation mode
-    model = models.resnet50(weights=None)
-    num_ftrs = model.fc.in_features
-    model.fc = torch.nn.Linear(num_ftrs, len(class_names))
-
-    # Load the checkpoint
-    checkpoint = torch.load(model_weights, map_location=torch.device("cpu"))
-
-    # Extract the state_dict
-    state_dict = checkpoint["state_dict"]
-
-    # Remove the 'model.' prefix from state_dict keys if present
-    new_state_dict = {k.replace("model.", ""): v for k, v in state_dict.items()}
-
-    # Load the state dict into the model
-    model.load_state_dict(new_state_dict)
+    model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1 if pretrained else None)
     model.eval()
-
     return model
 
-
-def processImage(image):
-
-    preprocess = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
+def create_labels(concept_scores, top_k=2):
+    """ Create a list with the ImageNet category names of the top scoring categories"""
+    imagenet_categories_url = (
+        "https://gist.githubusercontent.com/yrevar/942d3a0ac09ec9e5eb3a/raw/"
+        "238f720ff059c1f82f368259d1ca4ffa5dd8f9f5/imagenet1000_clsidx_to_labels.txt"
     )
-    input_tensor = preprocess(image).unsqueeze(0)
-    return input_tensor
+    labels = eval(requests.get(imagenet_categories_url).text)
+    concept_categories = np.argsort(concept_scores, axis=1)[:, ::-1][:, :top_k]
+    concept_labels_topk = []
+    for concept_index in range(concept_categories.shape[0]):
+        categories = concept_categories[concept_index, :]
+        concept_labels = []
+        for category in categories:
+            score = concept_scores[concept_index, category]
+            label = f"{labels[category].split(',')[0]}:{score:.2f}"
+            concept_labels.append(label)
+        concept_labels_topk.append("\n".join(concept_labels))
+    return concept_labels_topk
 
-
-def main(image_path, model_weights, method, outpath):
-
-    # Define class names for cats and dogs
-    class_names = ["cat", "dog"]
-
-    model = initModel(model_weights, class_names)
+def visualize_image(image_path, method):
+    model = initModel(pretrained=True)
 
     # Load and preprocess image
     image = Image.open(image_path)
@@ -118,7 +105,9 @@ def main(image_path, model_weights, method, outpath):
     overlay = overlay / np.max(overlay)
 
     # Add predicted label to the image
-    label = class_names[predicted_class]
+    scores = F.softmax(output, dim=1).detach().numpy()
+    labels = create_labels(scores, top_k=1)
+    label = labels[0]
     cv2.putText(
         overlay,
         label,
@@ -130,8 +119,10 @@ def main(image_path, model_weights, method, outpath):
         cv2.LINE_AA,
     )
 
-    # Save and display result
-    cv2.imwrite(outpath, np.uint8(255 * overlay))
+    # Convert overlay to Image for Gradio
+    overlay_image = Image.fromarray(np.uint8(255 * overlay))
+
+    return overlay_image
 
 
 if __name__ == "__main__":
@@ -142,4 +133,5 @@ if __name__ == "__main__":
     parser.add_argument("--output", help="Name of the output image file", default="output.png")
     args = parser.parse_args()
 
-    main(args.img, cfg["MODEL_WEIGHTS"], args.method, args.output)
+    overlay_img = visualize_image(args.img, args.method)
+    overlay_img.save(args.output)
