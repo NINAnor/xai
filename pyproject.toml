@@ -15,7 +15,7 @@ numpy = "^2.0.1"
 lightning = "^2.3.3"
 black = "^24.4.2"
 requests = "^2.32.3"
-gradio = "^4.39.0"
+gradio = "^4.44.0"
 
 
 [build-system]
